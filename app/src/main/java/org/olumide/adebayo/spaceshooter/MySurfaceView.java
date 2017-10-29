@@ -1,36 +1,27 @@
 package org.olumide.adebayo.spaceshooter;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
-import android.graphics.drawable.Drawable;
 import android.media.MediaPlayer;
-import android.net.Uri;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Random;
 
-import static android.R.attr.bottom;
-import static android.R.attr.left;
-import static android.R.attr.max;
-import static android.R.attr.min;
-import static android.R.attr.right;
-import static android.R.attr.top;
-import static android.R.attr.width;
-import static android.R.attr.x;
-import static android.R.attr.y;
+import static android.app.Activity.RESULT_OK;
+
 
 /**
  * Created by oadebayo on 10/28/17.
@@ -43,18 +34,20 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
     Canvas canvas;
     int orientation = 1;//default
     Paint paint =new Paint();
+    Paint textPaint = new Paint();
 
+    int bulletHop = 10;
     SpriteHelper spriteHelper= null;
 
     Resources res = getResources();
     int sWidth =0;
     int sHeight = 0;
-    boolean change = true;
     boolean setupDone = false;
 
     float yTouch, xTouch;
-
-    int enemyCount = 10;
+    MediaPlayer mp1, mp2;
+    //number of enemies
+    int enemyCount = 4;
     Point boom,shipBullet;
     Point ship=new Point(0,0);
     ArrayList<Point> enemies = new ArrayList<Point>();
@@ -62,6 +55,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 
     ArrayList<Rect> enemySprite = new ArrayList<Rect>();
 
+    int life = 5;
     Thread gameThread ;
     long enemyMoveTime = 0;
     //15 frames per seconds
@@ -78,22 +72,25 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
         this.ctx = ctx;
         this.orientation=orientation;
 
+        textPaint.setColor(Color.WHITE);
+     //   textPaint.setUnderlineText(true);
+        textPaint.setFakeBoldText(true);
+        textPaint.setTextSize(50.0f);
+
         Log.d("Olu","orientation is "+this.orientation);
 
         surfaceHolder = getHolder();
         surfaceHolder.addCallback(this);
         spriteHelper=sp;
-        gameThread = new Thread(runn);
+        gameThread = new Thread(runner);
 
     }
 
-    public void setTouchLocation(float x,float y){
-        xTouch=x;
-        yTouch=y;
+    public int getLife(){
+        return life;
     }
-
-    public void setSpriteHelper(SpriteHelper sp){
-        spriteHelper=sp;
+    public int getEnemyCount(){
+        return enemyCount;
     }
 
     @Override
@@ -122,6 +119,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
         drawBackground();
         drawBattle();
         drawShip();
+        drawStats();
         setupDone=true;
     }
 
@@ -152,11 +150,17 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
                 int next = rand.nextInt(spriteHelper.enemySprites.size()); //*( spriteHelper.enemySprites.size()-0)+spriteHelper.enemySprites.size();
                 Rect _rect = spriteHelper.enemySprites.remove(next);
                 enemySprite.add(i,_rect);
+
+                enemyCount--;
+
             }
         }
 
         for(int i=0;i<enemies.size();i++){
             Point p= enemies.get(i);
+            if( p == null){
+                continue;
+            }
             Rect place = new Rect(p.x,p.y,p.x+spriteHelper.enemyWidth,p.y+spriteHelper.enemyHeight);
 
             canvas.drawBitmap(spriteHelper.space,enemySprite.get(i),place,null);
@@ -166,11 +170,9 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
             Point bullet =null;
 
             if( enemyBullets.size()>i) {
-           //     Log.d("Olu","not calculating bullet Loc");
                 bullet = enemyBullets.get(i);
             }
             if( bullet == null) {
-            //    Log.d("Olu","calculating bullet loc");
                 bullet = getEnemyBullet(p);
                 enemyBullets.add(i,bullet);
 
@@ -179,13 +181,49 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
                     bullet.y+spriteHelper.enemybulletHeight);
             canvas.drawBitmap(spriteHelper.space,spriteHelper.enemybulletSprite,place,null);
 
-//            Log.d("Olu","adding enemy "+p.y+":  "+p.x);
 
-     //       Log.d("Olu","adding bullet "+bullet.y+":  "+bullet.x);
         }
 
+    }
+    private void drawStats(){
 
+        Log.d("Olu","Drawing stats");
 
+        //print #enemies left
+        String _text = "Enemies Left "+enemyCount;
+        if( enemyCount==0){
+            _text = "No more enemies :)";
+        }
+
+        Bitmap orgBit = BitmapFactory.decodeResource(res,R.drawable.enemy);
+        android.graphics.Bitmap.Config bitmapConfig =   orgBit.getConfig();
+        // set default bitmap config if none
+        if(bitmapConfig == null) {
+            bitmapConfig = android.graphics.Bitmap.Config.ARGB_8888;
+        }
+        // resource bitmaps are imutable,
+        // so we need to convert it to mutable one
+        Bitmap _b = orgBit.copy(bitmapConfig, true);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        // text color - #3D3D3D
+        paint.setColor(Color.rgb(110,110, 110));
+        // text size in pixels
+      // paint.setTextSize((int) (12 * scale));
+        // text shadow
+        paint.setShadowLayer(1f, 0f, 1f, Color.DKGRAY);
+
+        Rect src = new Rect(0,0,_b.getWidth(),_b.getHeight());
+        Rect dest = new Rect(0,0,100, 100);
+        canvas.drawBitmap(_b,src,dest,paint);
+        canvas.drawText(enemyCount+"",110.0f,90.0f,textPaint);
+
+        //draw life
+        orgBit = BitmapFactory.decodeResource(res,R.drawable.life);
+        _b = orgBit.copy(bitmapConfig,true);
+        src = new Rect(0,0,_b.getWidth(),_b.getHeight());
+        dest = new Rect(200,0,300,100);
+        canvas.drawBitmap(_b,src,dest,paint);
+        canvas.drawText(life+"",310.0f,90.0f,textPaint);
 
     }
 
@@ -198,8 +236,6 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
     private void drawPortraitBackground(){
         //canvas = surfaceHolder.lockCanvas();
 
-        Log.d("Olu","drawing bg image");
-
         Bitmap bitmap = BitmapFactory.decodeResource(res, R.drawable.bkg1);
         canvas.drawARGB(255, 0, 0, 0);
         canvas.drawBitmap(bitmap,0,0,paint);
@@ -207,10 +243,16 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
         //surfaceHolder.unlockCanvasAndPost(canvas);
     }
 
-    Runnable runn = new Runnable() {
+    Runnable runner = new Runnable() {
         @Override
         public void run() {
-            while(change) {
+            if( life == 0){
+                //lost
+            }
+            if( enemyCount==0){
+                //won
+            }
+            while(life >0 || enemyCount>0) {
                 if (!surfaceHolder.getSurface().isValid()) {
                     continue;
                 }
@@ -227,11 +269,34 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
                 if (dt >= skipTime) {
                     canvas = surfaceHolder.lockCanvas();
                     moveEnemyBullets();
-                    if( checkHits()){
-                        change = false;
-                    }else {
-                        doSetup();
+                    moveShipBullets();
+                    boolean shipHit=  checkShipHits();
+                    boolean enemyHit = checkEnemyHits();
+                    if( enemyHit ){
+                        enemyCount--;
+                        if( enemyCount< 0)
+                            enemyCount=0;
                     }
+                    if( shipHit){
+                        life--;
+                    }
+                    if( shipHit || enemyHit){
+                        surfaceHolder.unlockCanvasAndPost(canvas);
+                        try {
+                            Log.d("Olu","about to sleep ....there was a HIT");
+
+                            Thread.sleep(2000);
+                            if( mp1 != null){
+                                mp1.release();
+                            }
+                            if(mp2 != null){
+                                mp2.release();
+                            }
+                        }catch(Exception e){}
+                        canvas = surfaceHolder.lockCanvas();
+                    }
+                    doSetup();
+
                     surfaceHolder.unlockCanvasAndPost(canvas);
                    lastUpdate = System.currentTimeMillis();
                 }
@@ -244,6 +309,9 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
         gameThread.start();
     }
     public Point getEnemyBullet(Point r){
+        if( r == null){
+            return null;
+        }
         Point b = new Point();
         b.x = r.x + spriteHelper.enemyWidth/2 - spriteHelper.enemybulletWidth/2;
         b.y =  r.y+spriteHelper.enemyHeight;
@@ -302,8 +370,10 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
         ship.y = (int)yTouch;
 
         //ship bullet
+        if( shipBullet == null) {
+            shipBullet = getShipBullet(new Point((int) xTouch, (int) yTouch));
+        }
 
-        shipBullet= getShipBullet(new Point((int)xTouch,(int)yTouch));
         place = new Rect(shipBullet.x,shipBullet.y,shipBullet.x+spriteHelper.shipBulletSize,shipBullet.y+spriteHelper.shipBulletSize);
         canvas.drawBitmap(spriteHelper.space,spriteHelper.shipBulletSprite,place,null);
 
@@ -312,22 +382,19 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
     private void moveEnemyBullets(){
 
         for(Point bullet: enemyBullets){
-                bullet.y+=sHeight/10;
-       //     Log.d("Olu","new bullet LOC "+bullet.y+" :"+bullet.x);
-        }
+            if(bullet == null){
+                continue;
+            }
 
-        /*
-        Log.d("Olu","count of enemies "+enemies.size());
-        Log.d("Olu","count of bullets "+enemyBullets.size());
-        Log.d("Olu","count of sprite "+enemySprite);
-        Log.d("Olu","count of bullets "+enemyBullets);
-        Log.d("Olu","count of enemies "+enemies);
-*/
+            bullet.y+=sHeight/bulletHop;
+        }
 
         for(int i=0;i<enemyBullets.size();i++){
             Point bullet = enemyBullets.get(i);
+            if( bullet == null){
+                continue;
+            }
             if( bullet.y >= sHeight) {//reset
-            //    Log.d("Olu","index is "+i);
                 bullet = getEnemyBullet(enemies.get(i));
                 enemyBullets.set(i,bullet);
             }
@@ -335,12 +402,23 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
         }
 
     }
+    private void moveShipBullets(){
+
+        shipBullet.y -= sHeight/bulletHop;
+
+        if( shipBullet.y <= 0) {//reset
+            shipBullet = getShipBullet(ship);
+        }
+    }
 
 
-    public boolean checkHits()    {
+    public boolean checkShipHits()    {
 
         for(int i=0;i<enemyBullets.size();i++){
             Point bullet = enemyBullets.get(i);
+            if( bullet == null){
+                continue;
+            }
             if( bullet.y < ship.y){
                 continue;//no chance of a hit
             }
@@ -360,19 +438,54 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
                             bullet.y+spriteHelper.enemybulletHeight);
             Rect sRect = new Rect(ship.x,ship.y,ship.x+spriteHelper.shipVWidth,ship.y+spriteHelper.shipVHeight);
 
-            //if(sRect.intersect(bRect)){
-
             if( ship.x <= bullet.x && (ship.x+spriteHelper.shipVWidth)>=bullet.x
                     ||
                     ( ship.x>bullet.x && ship.x < bullet.x+spriteHelper.enemybulletWidth)
 
                     ) {//smack down
-            //  if( Rect.intersects(sRect,bRect)){
 
                 showShipExplosion();
                 bullet = getEnemyBullet(enemies.get(i));
                 enemyBullets.set(i,bullet);
 
+
+                Log.d("Olu","Your ship is dead man");
+
+                return true;
+
+            }
+        }
+        return false;
+    }
+
+    public boolean checkEnemyHits()    {
+
+        Log.d("Olu","ship "+ship.toString());
+
+        for(int i=0;i<enemies.size();i++){
+            Point enemy = enemies.get(i);
+
+            if(enemy==null){
+                continue;
+            }
+
+            Log.d("Olu","Enemy "+i+" "+enemy.toString());
+
+            if( shipBullet.y > enemy.y){
+                Log.d("Olu","A");
+                continue;//no chance of a hit
+            }
+
+            Log.d("Olu","ENEMY WAS HIT");
+
+            if( enemy.x <= shipBullet.x && (enemy.x+spriteHelper.enemyWidth)>=shipBullet.x
+                    ||
+                    ( ship.x>shipBullet.x && enemy.x < shipBullet.x+spriteHelper.shipBulletSize)
+
+                    ) {//smack down
+
+                showEnemyExplosion(i);
+                shipBullet = getShipBullet(ship);
 
                 Log.d("Olu","Your ship is dead man");
 
@@ -391,7 +504,65 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
         Rect place = new Rect(ship.x,ship.y,ship.x+spriteHelper.boomSize,ship.y+spriteHelper.boomSize);
         canvas.drawBitmap(spriteHelper.space,spriteHelper.boomsprites[2],place,null);
 
-        MediaPlayer mp = MediaPlayer.create(ctx,R.raw.shipboom);
-        mp.start();
+        mp1 = MediaPlayer.create(ctx,R.raw.shipboom);
+        mp1.start();
+
+
     }
-}
+    private void showEnemyExplosion(int i){
+
+        Point p = enemies.get(i);
+        if( p == null){
+            return;
+        }
+        Log.d("Olu","drawing explosion");
+
+        Rect place = new Rect(p.x,p.y,p.x+spriteHelper.boomSize,p.y+spriteHelper.boomSize);
+        canvas.drawBitmap(spriteHelper.space,spriteHelper.boomsprites[3],place,null);
+
+        mp2 = MediaPlayer.create(ctx,R.raw.enemyboom);
+        mp2.start();
+        replaceEnemy(i);
+
+    }
+
+    public void replaceEnemy(int i) {
+
+        if (enemies.size() < (i+1)) {
+            Log.e("Olu", "can't replace requested enemy");
+            return;
+        }
+
+        if( enemyCount <= 0){
+            enemies.set(i,null);
+            enemyBullets.set(i,null);
+            enemySprite.set(i,null);
+            Log.e("Olu","ENEMIES EXHAUSTED");
+            return;
+        }
+
+        Random rand = new Random();
+        int _i = rand.nextInt(9);// * (0.9f - 0.2f) + 0.9f;
+        if (_i < 2) {
+              _i = 2;
+        }
+        rand = new Random();
+        int _j = rand.nextInt(5);//*(0.5f-0.1f)+0.5f;
+        if(_j < 2){ _j=2;}
+
+        int xlocation = (int) (sWidth * (0.1f * _i));
+        int ylocation = (int) (sHeight * (0.1f * _j));
+
+        //update to a new enemy
+        enemies.set(i, new Point(xlocation,ylocation));
+
+        //save the sprite too
+        rand = new Random();
+        int next = rand.nextInt(spriteHelper.enemySprites.size()); //*( spriteHelper.enemySprites.size()-0)+spriteHelper.enemySprites.size();
+        Rect _rect = spriteHelper.enemySprites.remove(next);
+        enemySprite.set(i, _rect);
+
+
+    }
+
+    }

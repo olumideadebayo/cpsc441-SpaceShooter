@@ -26,6 +26,21 @@
         android:layout_height="wrap_content"
         android:layout_weight="1" />
 
+    <TextView
+        android:id="@+id/editText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="HW 5 - Space Shooter"
+        android:gravity="center"
+        android:layout_gravity="center_horizontal"
+        android:layout_weight="1"
+        android:ems="10" />
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1" />
+
     <ImageView
         android:id="@+id/imageView"
         android:layout_width="166dp"
@@ -33,20 +48,8 @@
         android:layout_gravity="center"
         android:src="@drawable/profile" />
 
-    <Space
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_weight="1" />
 
-    <Button
-        android:id="@+id/action"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
 
-        android:layout_gravity="center_horizontal"
-        android:layout_weight="1"
-        android:gravity="center"
-        android:text="Start" />
 
     <Space
         android:layout_width="match_parent"
