@@ -9,6 +9,8 @@ import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
+import android.media.MediaPlayer;
+import android.net.Uri;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -388,5 +390,8 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 
         Rect place = new Rect(ship.x,ship.y,ship.x+spriteHelper.boomSize,ship.y+spriteHelper.boomSize);
         canvas.drawBitmap(spriteHelper.space,spriteHelper.boomsprites[2],place,null);
+
+        MediaPlayer mp = MediaPlayer.create(ctx,R.raw.shipboom);
+        mp.start();
     }
 }
