@@ -24,25 +24,16 @@ public class Stage1 extends Activity {
         mySurfaceView.setOnTouchListener(mySurfaceView);
         mySurfaceView.startGame();
 
-        /*
-        Handler handler = new Handler(){
-            @Override
-            public void handleMessage(Message msg){
-
-            }
-        }
-        */
-
-      //  final Handler timerHandler = new Handler();
-
         Runnable timerRunnable = new Runnable() {
             @Override
             public void run() {
                     while( mySurfaceView.getLife()>0 && mySurfaceView.getEnemyCount()>0){
                         //keep waiting
-                       //timerHandler.postDelayed(this, 5000);
+                        try {
+                            Thread.sleep(10000);
+                        }catch (Exception e){}
+                        }
 
-                    }
 
                     Log.d("Olu","GAME ENDED");
 
@@ -56,9 +47,11 @@ public class Stage1 extends Activity {
                 intent.putExtra("status", status);
                 setResult(RESULT_OK, intent);
                 finish();
+                return;
             }
         };
 
+        //start a listening thread ...when the thread sees the game is over it goes to previous activity
         Thread _t = new Thread(timerRunnable);
         Log.d("Olu","starting monitor");
         _t.start();

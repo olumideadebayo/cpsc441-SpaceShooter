@@ -47,7 +47,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
     float yTouch, xTouch;
     MediaPlayer mp1, mp2;
     //number of enemies
-    int enemyCount = 4;
+    int enemyCount = 10;
     Point boom,shipBullet;
     Point ship=new Point(0,0);
     ArrayList<Point> enemies = new ArrayList<Point>();
@@ -59,8 +59,8 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
     Thread gameThread ;
     long enemyMoveTime = 0;
     //15 frames per seconds
-    //float skipTime =1000.0f/15.0f; //setting 30fps
-    float skipTime = 2000.0f/1.0f;
+  //  float skipTime =1000.0f/8.0f; //setting 30fps
+    float skipTime = 1000.0f/1.0f;
 
     long lastUpdate;
     float dt;
@@ -252,7 +252,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
             if( enemyCount==0){
                 //won
             }
-            while(life >0 || enemyCount>0) {
+            while(life >0 && enemyCount>0) {
                 if (!surfaceHolder.getSurface().isValid()) {
                     continue;
                 }
@@ -270,6 +270,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
                     canvas = surfaceHolder.lockCanvas();
                     moveEnemyBullets();
                     moveShipBullets();
+                    doSetup();
                     boolean shipHit=  checkShipHits();
                     boolean enemyHit = checkEnemyHits();
                     if( enemyHit ){
@@ -346,8 +347,18 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
     private Point getShipBullet(Point p){
 
         Point _p = new Point(0, (int)(sHeight*0.8));
+        /*
         int x = p.x + spriteHelper.shipVHeight/2 - spriteHelper.shipBulletSize/2;
         _p.x = x;
+        */
+        Random r = new Random();
+        _p.x = r.nextInt(9);
+        if( _p.x<1){
+            _p.x=1;
+        }
+        _p.x =  (int)(_p.x *0.1 *sWidth);
+
+        Log.d("OLUU","SHIP BULLET "+_p);
         return _p;
     }
 
@@ -395,6 +406,7 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
                 continue;
             }
             if( bullet.y >= sHeight) {//reset
+                shiftEnemy(i);//relocate
                 bullet = getEnemyBullet(enemies.get(i));
                 enemyBullets.set(i,bullet);
             }
@@ -478,11 +490,20 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
 
             Log.d("Olu","ENEMY WAS HIT");
 
+            if(
+                    enemy.x<shipBullet.x && shipBullet.x <(enemy.x+spriteHelper.enemyWidth)
+                    ||
+                            shipBullet.x<enemy.x && enemy.x < (shipBullet.x+spriteHelper.shipBulletSize)
+                    || enemy.x<shipBullet.x && ((enemy.x+spriteHelper.enemyWidth)<  (shipBullet.x+spriteHelper.shipBulletSize))
+
+                    ){
+/*
             if( enemy.x <= shipBullet.x && (enemy.x+spriteHelper.enemyWidth)>=shipBullet.x
                     ||
                     ( ship.x>shipBullet.x && enemy.x < shipBullet.x+spriteHelper.shipBulletSize)
 
                     ) {//smack down
+                */
 
                 showEnemyExplosion(i);
                 shipBullet = getShipBullet(ship);
@@ -562,7 +583,32 @@ public class MySurfaceView extends SurfaceView implements SurfaceHolder.Callback
         Rect _rect = spriteHelper.enemySprites.remove(next);
         enemySprite.set(i, _rect);
 
-
     }
 
+    public void shiftEnemy(int i) {
+
+        if (enemies.size() < (i+1)) {
+            Log.e("Olu", "can't shift requested enemy");
+            return;
+        }
+
+
+
+        Random rand = new Random();
+        int _i = rand.nextInt(9);// * (0.9f - 0.2f) + 0.9f;
+        if (_i < 2) {
+            _i = 2;
+        }
+        rand = new Random();
+        int _j = rand.nextInt(5);//*(0.5f-0.1f)+0.5f;
+        if(_j < 2){ _j=2;}
+
+        int xlocation = (int) (sWidth * (0.1f * _i));
+        int ylocation = (int) (sHeight * (0.1f * _j));
+
+        //update to a new location
+        enemies.set(i, new Point(xlocation,ylocation));
     }
+
+
+}

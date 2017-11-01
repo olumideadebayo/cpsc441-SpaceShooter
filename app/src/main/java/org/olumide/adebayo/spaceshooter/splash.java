@@ -6,6 +6,7 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -18,8 +19,8 @@ public class splash extends Activity {
 
     public static final int COMM_CODE = 201;
 
-    long endTime = 0l;
     int status = 0;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,28 +30,37 @@ public class splash extends Activity {
 
     }
 
+
+    @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
 
         long  _now = System.currentTimeMillis();
        // showDialog=true;
 
         long diff = _now - startTime;
-        long minutes = diff/60000;
+
+        long minutes = (diff / 1000)  / 60;
+        long seconds = (diff / 1000) % 60;
+        //Log.d("OLUU","started at "+_now);
+        //Log.d("OLUU","ended at "+startTime);
+        Log.d("OLUU","time taken "+diff);
 
         if (requestCode == COMM_CODE) {
             if(resultCode == RESULT_OK) {
                 status = data.getIntExtra("status", 0);
 
-                String msg = "";
+                String msg = "in "+minutes+" and "+seconds+" seconds";
                 if( status == 1) {
-                    drawDialog("You Won","in "+minutes +" minutes");
+                    drawDialog("You Won",msg);
                 }else {
-                    drawDialog("You Lost",""+minutes+ " minutes");
+                    drawDialog("You Lost",msg);
                 }
 
             }
         }
+
+        super.onActivityResult(requestCode, resultCode, data);
+
     }
 
 
@@ -80,11 +90,11 @@ public class splash extends Activity {
         builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
-
+                return;
             }
         });
         builder.show();
-
+        return;
 
     }
 
